@@ -9,6 +9,8 @@ executionMode: kubewarden-wapc
 backgroundAudit: false
 annotations:
   io.kubewarden.policy.title: remove-cpu-limits
+  io.kubewarden.policy.version: 0.1.0
+  io.kubewarden.policy.ociUrl: ghcr.io/cdalar/policies/remove-cpu-limits
   io.kubewarden.policy.description: Mutating policy that removes `resources.limits.cpu` from every container (regular, init and ephemeral) of a Pod
   io.kubewarden.policy.author: Cemal Y. Dalar
   io.kubewarden.policy.url: https://github.com/cdalar/kubewarden-remove-cpu-limits

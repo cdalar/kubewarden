@@ -14,7 +14,7 @@ func runValidateSettings(t *testing.T, payload string) kubewarden_protocol.Setti
 		t.Fatalf("unexpected error: %v", err)
 	}
 	response := kubewarden_protocol.SettingsValidationResponse{}
-	if err := json.Unmarshal(responsePayload, &response); err != nil {
+	if err = json.Unmarshal(responsePayload, &response); err != nil {
 		t.Fatalf("cannot unmarshal response: %v", err)
 	}
 	return response

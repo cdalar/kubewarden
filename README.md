@@ -66,7 +66,7 @@ kind: ClusterAdmissionPolicy
 metadata:
   name: remove-cpu-limits
 spec:
-  module: registry://ghcr.io/<your-org>/policies/remove-cpu-limits:v0.1.0
+  module: registry://ghcr.io/cdalar/policies/remove-cpu-limits:v0.1.0
   rules:
     - apiGroups: [""]
       apiVersions: ["v1"]
@@ -94,3 +94,17 @@ Try it locally with `kwctl`:
 ```console
 kwctl run annotated-policy.wasm -r test_data/pod_with_cpu_limits.json --settings-json '{}'
 ```
+
+## CI / release
+
+- `.github/workflows/test.yml` runs on every push and pull request: Go unit
+  tests, `go vet` + golangci-lint, and a TinyGo build followed by the `kwctl`
+  e2e tests. The built `policy.wasm` is uploaded as a workflow artifact.
+- `.github/workflows/release.yml` runs the same checks and then:
+  - on every push to `main`, pushes `ghcr.io/cdalar/policies/remove-cpu-limits:latest`;
+  - on a `vX.Y.Z` tag, pushes `:vX.Y.Z` and `:latest`, signs the artifact with
+    cosign (keyless) and creates a GitHub release with the Wasm files attached.
+    The tag must match `io.kubewarden.policy.version` in `metadata.yml`.
+
+To cut a release: bump `io.kubewarden.policy.version`, commit, then
+`git tag v0.1.0 && git push origin v0.1.0`.
