@@ -1,0 +1,55 @@
+{
+  "uid": "1299d386-525b-4032-98ae-1949f69f9cfc",
+  "kind": { "group": "", "version": "v1", "kind": "Pod" },
+  "resource": { "group": "", "version": "v1", "resource": "pods" },
+  "requestKind": { "group": "", "version": "v1", "kind": "Pod" },
+  "requestResource": { "group": "", "version": "v1", "resource": "pods" },
+  "name": "nginx",
+  "namespace": "default",
+  "operation": "CREATE",
+  "userInfo": { "username": "kubernetes-admin", "groups": ["system:masters", "system:authenticated"] },
+  "object": {
+    "apiVersion": "v1",
+    "kind": "Pod",
+    "metadata": { "name": "nginx", "namespace": "default" },
+    "spec": {
+      "terminationGracePeriodSeconds": 30,
+      "someUnknownFutureField": "kept",
+      "initContainers": [
+        {
+          "name": "init",
+          "image": "busybox",
+          "resources": { "limits": { "cpu": "200m" } }
+        }
+      ],
+      "containers": [
+        {
+          "name": "nginx",
+          "image": "nginx",
+          "resources": {
+            "limits": { "cpu": "500m", "memory": "128Mi" },
+            "requests": { "cpu": "100m", "memory": "64Mi" }
+          }
+        },
+        {
+          "name": "sidecar",
+          "image": "busybox",
+          "resources": {
+            "limits": { "cpu": "1" },
+            "requests": { "memory": "32Mi" }
+          }
+        }
+      ],
+      "ephemeralContainers": [
+        {
+          "name": "debugger",
+          "image": "busybox",
+          "resources": { "limits": { "cpu": "250m", "memory": "16Mi" } }
+        }
+      ]
+    }
+  },
+  "oldObject": null,
+  "dryRun": false,
+  "options": { "kind": "CreateOptions", "apiVersion": "meta.k8s.io/v1" }
+}

@@ -1,0 +1,24 @@
+rules:
+  - apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+    operations: ["CREATE", "UPDATE"]
+mutating: true
+contextAwareResources: []
+executionMode: kubewarden-wapc
+backgroundAudit: false
+annotations:
+  io.kubewarden.policy.title: remove-cpu-limits
+  io.kubewarden.policy.description: Mutating policy that removes `resources.limits.cpu` from every container (regular, init and ephemeral) of a Pod
+  io.kubewarden.policy.author: Cemal Y. Dalar
+  io.kubewarden.policy.url: https://github.com/cdalar/kubewarden-remove-cpu-limits
+  io.kubewarden.policy.source: https://github.com/cdalar/kubewarden-remove-cpu-limits
+  io.kubewarden.policy.license: Apache-2.0
+  io.kubewarden.policy.category: Resource validation
+  io.kubewarden.policy.severity: low
+  io.kubewarden.policy.resources: Pod
+  io.kubewarden.policy.mutating: "true"
+  io.kubewarden.policy.contextAware: "false"
+  io.artifacthub.displayName: Remove CPU limits
+  io.artifacthub.resources: Pod
+  io.artifacthub.keywords: pod, cpu, limits, resources, mutating
