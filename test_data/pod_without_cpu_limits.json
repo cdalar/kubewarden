@@ -1,0 +1,32 @@
+{
+  "uid": "7c3b1b0e-2f4a-4b3e-9c8e-0f3d2a1b4c5d",
+  "kind": { "group": "", "version": "v1", "kind": "Pod" },
+  "resource": { "group": "", "version": "v1", "resource": "pods" },
+  "requestKind": { "group": "", "version": "v1", "kind": "Pod" },
+  "requestResource": { "group": "", "version": "v1", "resource": "pods" },
+  "name": "no-limits",
+  "namespace": "default",
+  "operation": "CREATE",
+  "userInfo": { "username": "kubernetes-admin", "groups": ["system:masters", "system:authenticated"] },
+  "object": {
+    "apiVersion": "v1",
+    "kind": "Pod",
+    "metadata": { "name": "no-limits", "namespace": "default" },
+    "spec": {
+      "containers": [
+        {
+          "name": "app",
+          "image": "nginx",
+          "resources": {
+            "limits": { "memory": "64Mi" },
+            "requests": { "cpu": "50m", "memory": "32Mi" }
+          }
+        },
+        { "name": "sidecar", "image": "busybox" }
+      ]
+    }
+  },
+  "oldObject": null,
+  "dryRun": false,
+  "options": { "kind": "CreateOptions", "apiVersion": "meta.k8s.io/v1" }
+}

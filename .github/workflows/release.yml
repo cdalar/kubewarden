@@ -1,0 +1,106 @@
+name: Release policy
+
+# - push to main  -> publishes ghcr.io/<owner>/policies/remove-cpu-limits:latest
+# - tag v*        -> publishes :vX.Y.Z (and :latest) and creates a GitHub release
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+env:
+  OCI_TARGET: ghcr.io/${{ github.repository_owner }}/policies/remove-cpu-limits
+  TINYGO_VERSION: "0.39.0"
+  TINYGO_DEB_SHA256: "775f15974e35059c8f3a141266bd9d293b5d556a3e44d5e6356c5602e9f386ab"
+
+jobs:
+  test:
+    name: Tests and linters
+    uses: ./.github/workflows/test.yml
+
+  release:
+    name: Build, push and sign
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create GitHub releases
+      packages: write   # push to ghcr.io
+      id-token: write   # cosign keyless signing
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Install tinygo
+        run: |
+          set -euo pipefail
+          deb="tinygo_${TINYGO_VERSION}_amd64.deb"
+          wget -q "https://github.com/tinygo-org/tinygo/releases/download/v${TINYGO_VERSION}/${deb}"
+          echo "${TINYGO_DEB_SHA256}  ${deb}" | sha256sum --check
+          sudo dpkg -i "${deb}"
+      - name: Install kwctl and cosign
+        uses: kubewarden/github-actions/kwctl-installer@540e407be3b5eb379482bd9ea2a2de51a79a74cb # v4.x
+      - name: Install bats
+        run: sudo apt-get install -y bats
+
+      - name: Calculate version
+        id: version
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="0.0.0-$(git rev-parse --short HEAD)-unreleased"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Releasing version ${version}"
+      - name: Check io.kubewarden.policy.version matches the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          annotated=$(grep 'io.kubewarden.policy.version' metadata.yml | awk '{print $2}' | tr -d '"')
+          if [[ "${annotated}" != "${{ steps.version.outputs.version }}" ]]; then
+            echo "metadata.yml says ${annotated} but the tag is ${{ steps.version.outputs.version }}"
+            exit 1
+          fi
+
+      - name: Build and annotate policy
+        run: make annotated-policy.wasm
+      - name: Run e2e tests
+        run: make e2e-tests
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push policy to OCI registry and sign it
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tags=("${GITHUB_REF_NAME}" "latest")
+          else
+            tags=("latest")
+          fi
+          for tag in "${tags[@]}"; do
+            echo "Pushing ${OCI_TARGET}:${tag}"
+            ref=$(kwctl push -o json annotated-policy.wasm "${OCI_TARGET}:${tag}" | jq -r .immutable_ref)
+            echo "Signing ${ref}"
+            cosign sign --yes "${ref}"
+          done
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          prerelease=""
+          case "${GITHUB_REF_NAME}" in *-alpha*|*-beta*|*-rc*) prerelease="--prerelease" ;; esac
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes ${prerelease} \
+            --notes "Policy published to \`${OCI_TARGET}:${GITHUB_REF_NAME}\` (signed with cosign keyless)." \
+            policy.wasm annotated-policy.wasm
